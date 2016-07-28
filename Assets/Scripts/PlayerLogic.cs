@@ -4,6 +4,7 @@ using UnityEngine.UI;
 
 public class PlayerLogic : MonoBehaviour {
 	public int health = 100;
+	public AudioClip TakeDamage;
 
 	// Update is called once per frame
 	void Update() {
@@ -21,6 +22,8 @@ public class PlayerLogic : MonoBehaviour {
 	[PunRPC]
 	void ApplyDamage(int amount) {
 		health -= amount;
+		GetComponent<AudioSource>().clip = TakeDamage;
+		GetComponent<AudioSource>().Play();
 	}
 
 	void KillPlayer() {

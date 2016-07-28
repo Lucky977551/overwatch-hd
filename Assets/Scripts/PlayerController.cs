@@ -9,12 +9,9 @@ public class PlayerController : MonoBehaviour {
 	float jumpSpeed = 8.0F;
 	float gravity = 20.0F;
 
-	public int health = 100;
 	public AudioClip quote;
 	public AudioClip ultimate;
-
 	void Start() {
-
 	}
 
 	// Update is called once per frame
