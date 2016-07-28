@@ -5,9 +5,8 @@ using UnityEngine.UI;
 public class PlayerLogic : MonoBehaviour {
 	public int health = 100;
 
-	// Use this for initialization
-	void Start() {
-	}
+	float deathTimer = 100F;
+	bool dead = false;
 
 	// Update is called once per frame
 	void Update() {
@@ -20,6 +19,13 @@ public class PlayerLogic : MonoBehaviour {
 		if (health <= 0) {
 			KillPlayer();
 		}
+
+		if (dead == true && deathTimer > 0) {
+			deathTimer -= Time.deltaTime;
+		}
+		if (deathTimer <= 0) {
+			GameObject.Find("GameManager").GetComponent<NetworkManager>().SpawnPlayer();
+		}
 	}
 
 	[PunRPC]
@@ -28,10 +34,9 @@ public class PlayerLogic : MonoBehaviour {
 	}
 
 	void KillPlayer() {
-		Debug.Log("You have died.");
 		Destroy(gameObject);
+		dead = true;
 
-		// Respawn the player
-		GameObject.Find("GameManager").GetComponent<NetworkManager>().SpawnPlayer();
+		Debug.Log("You have died.");
 	}
 }
