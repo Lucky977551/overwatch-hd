@@ -39,6 +39,7 @@ GameObject:
   - 114: {fileID: 11443278}
   - 114: {fileID: 11464128}
   - 114: {fileID: 11400908}
+  - 114: {fileID: 11461674}
   m_Layer: 0
   m_Name: Moneky
   m_TagString: Player
@@ -239,6 +240,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de491340128f87e4ba8f1ee7a196c3a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  health: 100
 --- !u!114 &11401638
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -316,6 +318,18 @@ MonoBehaviour:
   targetDirection: {x: 0, y: 0}
   targetCharacterDirection: {x: 0, y: 0}
   characterBody: {fileID: 137298}
+--- !u!114 &11461674
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 137298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d9ab67f159d9df4080106f133cd1ca9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  testSound: {fileID: 8300000, guid: 39a5b94ec90cdbf48945f2d591844aa5, type: 3}
 --- !u!114 &11464128
 MonoBehaviour:
   m_ObjectHideFlags: 1
