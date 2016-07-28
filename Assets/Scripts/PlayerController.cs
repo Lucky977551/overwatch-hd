@@ -11,8 +11,6 @@ public class PlayerController : MonoBehaviour {
 
 	int health = 100;
 
-	bool ultimateReady = false;
-
 	// Update is called once per frame
 	void Update() {
 		CharacterController controller = GetComponent<CharacterController>();
