@@ -1,8 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class GameManager : MonoBehaviour {
-	public const string VERSION = "0.2.1";
+public class RPCTest : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
@@ -11,8 +10,6 @@ public class GameManager : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		if (Input.GetKeyDown(KeyCode.Escape)) {
-			//Application.Quit();
-		}
+	
 	}
 }

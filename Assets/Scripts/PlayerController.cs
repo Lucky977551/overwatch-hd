@@ -34,28 +34,9 @@ public class PlayerController : MonoBehaviour {
 		moveDirection.y -= gravity * Time.deltaTime;
 		controller.Move(moveDirection * Time.deltaTime);
 
-		if (transform.position.y < -100) {
-			KillHero();
-		}
-
 		if (Input.GetButtonDown("Ultimate Ability")) {
 			GetComponent<AudioSource>().clip = ultimate;
 			GetComponent<AudioSource>().Play();
 		}
-
-		GameObject.Find("Health").GetComponentInChildren<Text>().text = health.ToString();
-	}
-
-	void TakeDamage(int amount) {
-		health -= amount;
-	}
-
-	void KillHero() {
-		Debug.Log("Died, respawning.");
-	
-		health = 100;
-		transform.position = GameObject.Find("Spawnpoint").transform.position;
-		GetComponent<AudioSource>().clip = quote;
-		GetComponent<AudioSource>().Play();
 	}
 }

@@ -35,7 +35,7 @@ public class NetworkManager : MonoBehaviour {
 	void OnJoinedRoom() {
 		Debug.Log("Joined room " + PhotonNetwork.room.name + ".");
 
-		SpawnHero();
+		SpawnPlayer();
 	}
 
 	void OnPhotonJoinRoomFailed() {
@@ -57,7 +57,7 @@ public class NetworkManager : MonoBehaviour {
 		GameObject.Find("ConnectionStatus").GetComponent<Text>().text = "Disconnected";
 	}
 
-	void SpawnHero() {
+	public void SpawnPlayer() {
 		PhotonNetwork.Instantiate("Moneky", GameObject.Find("Spawnpoint").transform.position, Quaternion.identity, 0);
 	}
 }
