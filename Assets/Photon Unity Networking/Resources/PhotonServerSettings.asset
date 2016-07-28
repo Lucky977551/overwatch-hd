@@ -21,6 +21,7 @@ MonoBehaviour:
   JoinLobby: 1
   EnableLobbyStatistics: 0
   RpcList:
+  - health
   - Chat
   - DestroyRpc
   - InstantiateRpc
