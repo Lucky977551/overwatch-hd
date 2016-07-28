@@ -9,7 +9,7 @@ public class PlayerController : MonoBehaviour {
 	float jumpSpeed = 8.0F;
 	float gravity = 20.0F;
 
-	int health = 100;
+	public int health = 100;
 
 	// Update is called once per frame
 	void Update() {
@@ -38,6 +38,10 @@ public class PlayerController : MonoBehaviour {
 		}
 
 		GameObject.Find("Health").GetComponentInChildren<Text>().text = health.ToString();
+	}
+
+	void TakeDamage(int amount) {
+		health -= amount;
 	}
 
 	void KillHero() {
