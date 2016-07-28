@@ -22,6 +22,11 @@ public class PlayerLogic : MonoBehaviour {
 		}
 	}
 
+	[PunRPC]
+	void ApplyDamage(int amount) {
+		health -= amount;
+	}
+
 	void KillPlayer() {
 		Debug.Log("You have died.");
 		Destroy(gameObject);
