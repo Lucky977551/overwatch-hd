@@ -7,6 +7,7 @@ public class NetworkPlayer : Photon.MonoBehaviour {
 		if (photonView.isMine) {
 			gameObject.GetComponent<PlayerController>().enabled = true;
 			gameObject.transform.FindChild("Camera").gameObject.SetActive(true);
+			gameObject.GetComponent<MeshRenderer>().enabled = false;
 		}
 	}
 }
