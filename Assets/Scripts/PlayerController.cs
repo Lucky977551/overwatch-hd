@@ -10,6 +10,11 @@ public class PlayerController : MonoBehaviour {
 	float gravity = 20.0F;
 
 	public int health = 100;
+	public AudioClip quote;
+	public AudioClip ultimate;
+
+	void Start() {
+	}
 
 	// Update is called once per frame
 	void Update() {
@@ -34,7 +39,8 @@ public class PlayerController : MonoBehaviour {
 		}
 
 		if (Input.GetButtonDown("Ultimate Ability")) {
-			KillHero();
+			GetComponent<AudioSource>().clip = ultimate;
+			GetComponent<AudioSource>().Play();
 		}
 
 		GameObject.Find("Health").GetComponentInChildren<Text>().text = health.ToString();
@@ -46,8 +52,10 @@ public class PlayerController : MonoBehaviour {
 
 	void KillHero() {
 		Debug.Log("Died, respawning.");
-
+	
 		health = 100;
 		transform.position = GameObject.Find("Spawnpoint").transform.position;
+		GetComponent<AudioSource>().clip = quote;
+		GetComponent<AudioSource>().Play();
 	}
 }

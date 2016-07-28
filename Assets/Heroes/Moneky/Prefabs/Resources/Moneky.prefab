@@ -250,6 +250,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   health: 100
+  quote: {fileID: 8300000, guid: 7e8a5bbb5a4a39b43a5d4ebb1ec22c15, type: 3}
   ultimate: {fileID: 8300000, guid: fda5dab7cc77019488c9114562112dd8, type: 3}
 --- !u!114 &11402186
 MonoBehaviour:
