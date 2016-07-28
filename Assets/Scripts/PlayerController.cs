@@ -29,11 +29,16 @@ public class PlayerController : MonoBehaviour {
 		moveDirection.y -= gravity * Time.deltaTime;
 		controller.Move(moveDirection * Time.deltaTime);
 
+
+		if (Input.GetButtonDown("Ultimate Ability")) {
+			TakeDamage(10);
+		}
+
 		if (transform.position.y < -100) {
 			KillHero();
 		}
 
-		if (Input.GetButtonDown("Ultimate Ability")) {
+		if (health >= 0) {
 			KillHero();
 		}
 
