@@ -33,4 +33,5 @@ MonoBehaviour:
   - RequestForPickupItems
   - RequestForPickupTimes
   - TestSound
+  - ApplyDamage
   DisableAutoOpenWizard: 1
