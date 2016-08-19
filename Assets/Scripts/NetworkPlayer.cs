@@ -16,8 +16,8 @@ public class NetworkPlayer : Photon.MonoBehaviour {
 
 	void Update() {
 		if (!photonView.isMine) {
-			transform.position = Vector3.Lerp(transform.position, correctPlayerPos, Time.deltaTime * 5);
-			transform.rotation = Quaternion.Lerp(transform.rotation, correctPlayerRot, Time.deltaTime * 5);
+			transform.position = Vector3.Lerp(transform.position, correctPlayerPos, Time.deltaTime * 10);
+			transform.rotation = Quaternion.Lerp(transform.rotation, correctPlayerRot, Time.deltaTime * 10);
 		}
 	}
 

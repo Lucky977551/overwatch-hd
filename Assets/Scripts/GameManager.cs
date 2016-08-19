@@ -2,7 +2,7 @@
 using System.Collections;
 
 public class GameManager : MonoBehaviour {
-	public const string VERSION = "0.2.1";
+	public const string VERSION = "0.2.2";
 
 	// Use this for initialization
 	void Start () {
