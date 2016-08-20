@@ -1,8 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class PlayerAttacking : Photon.MonoBehaviour {
-	PhotonView myPhotonView;
+public class PlayerAttacking : MonoBehaviour {
 	RaycastHit hitInfo;
 
 	float cooldown = 0;
@@ -24,13 +23,13 @@ public class PlayerAttacking : Photon.MonoBehaviour {
 			return;
 		}
 
-		Ray attack = new Ray(transform.position, transform.forward);
-
 		Debug.Log("Fire!");
+
+		Ray attack = new Ray(transform.position, transform.forward);
 		if (Physics.Raycast(attack, out hitInfo)) {
 			Debug.Log("Hit object: " + hitInfo.collider.name);
 
-			photonView.RPC("ApplyDamage", PhotonTargets.Others, 20);
+			hitInfo.transform.gameObject.GetComponent<PhotonView>().RPC("ApplyDamage", PhotonTargets.All, 20);
 		}
 
 		// Begin cooldown
