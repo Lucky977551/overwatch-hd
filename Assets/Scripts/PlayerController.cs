@@ -35,6 +35,10 @@ public class PlayerController : MonoBehaviour {
 		if (Input.GetButtonDown("Ultimate Ability")) {
 			GetComponent<AudioSource>().clip = ultimate;
 			GetComponent<AudioSource>().Play();
+
+			// TODO RPC this
 		}
+
+		// Footsteps
 	}
 }
