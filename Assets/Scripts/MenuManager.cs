@@ -3,7 +3,9 @@ using System.Collections;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class MainMenu : MonoBehaviour {
+public class MenuManager : MonoBehaviour {
+	public GameObject mainMenu;
+	public GameObject optionsMenu;
 	GameObject currentHero;
 
 	void Start() {
@@ -15,7 +17,9 @@ public class MainMenu : MonoBehaviour {
 
 	void Update() {
 		// Rotate the current hero around and around
-		currentHero.transform.rotation = currentHero.transform.rotation * Quaternion.Euler(0, 1, 0);
+		currentHero.transform.rotation = currentHero.transform.rotation * Quaternion.Euler(0, 0.2f, 0);
+
+
 	}
 
 	public void StartGame() {
@@ -26,10 +30,10 @@ public class MainMenu : MonoBehaviour {
 	}
 
 	public void OptionsMenu() {
-		Debug.Log("Switching to options menu...");
+		optionsMenu.SetActive(true);
 	}
 
-	public void FrontMenu() {
-
+	public void MainMenu() {
+		optionsMenu.SetActive(false);
 	}
 }
