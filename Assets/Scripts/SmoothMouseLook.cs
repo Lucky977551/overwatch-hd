@@ -17,8 +17,6 @@ public class SmoothMouseLook : MonoBehaviour {
 	// Yaw rotation will affect this object instead of the camera if set.
 	public GameObject characterBody;
 
-	bool locked;
-
 	void Start() {
 		// Set target direction to the camera's initial orientation.
 		targetDirection = transform.localRotation.eulerAngles;
@@ -28,7 +26,6 @@ public class SmoothMouseLook : MonoBehaviour {
 
 		// Lock the cursor
 		Cursor.lockState = CursorLockMode.Locked;
-		locked = true;
 	}
 
 	void Update() {
@@ -70,16 +67,6 @@ public class SmoothMouseLook : MonoBehaviour {
 		} else {
 			var yRotation = Quaternion.AngleAxis(_mouseAbsolute.x, transform.InverseTransformDirection(Vector3.up));
 			transform.localRotation *= yRotation;
-		}
-
-		if (Input.GetKeyDown(KeyCode.Escape)) {
-			if(locked) {
-				Cursor.lockState = CursorLockMode.None;
-				Cursor.visible = true;
-			} else {
-				Cursor.lockState = CursorLockMode.Locked;
-				Cursor.visible = false;
-			}
 		}
 	}
 }
