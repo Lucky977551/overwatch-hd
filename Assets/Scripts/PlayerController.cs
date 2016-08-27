@@ -4,14 +4,21 @@ using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour {
 	Vector3 moveDirection = Vector3.zero;
+	public GameObject lobbyMenu;
+	public GameObject inGameMenu;
 
-	float speed = 6.0F;
+	float cooldown = 1f;
+
+	float speed = 12.0F;
 	float jumpSpeed = 8.0F;
 	float gravity = 20.0F;
 
 	public AudioClip quote;
 	public AudioClip ultimate;
+
 	void Start() {
+		GameObject.Find("LobbyMenu").SetActive(false);
+		inGameMenu.SetActive(true);
 	}
 
 	// Update is called once per frame
@@ -32,13 +39,13 @@ public class PlayerController : MonoBehaviour {
 		moveDirection.y -= gravity * Time.deltaTime;
 		controller.Move(moveDirection * Time.deltaTime);
 
-		if (Input.GetButtonDown("Ultimate Ability")) {
-			GetComponent<AudioSource>().clip = ultimate;
-			GetComponent<AudioSource>().Play();
-
-			// TODO RPC this
+		cooldown -= Time.deltaTime;
+		if (Input.GetButtonDown("Ultimate Ability") && cooldown >= 0) {
+			
 		}
+	}
 
-		// Footsteps
+	void DoUltimate() {
+
 	}
 }
