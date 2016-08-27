@@ -10,9 +10,9 @@ public class NetworkManager : MonoBehaviour {
 
 	void OnGUI() {
 		if (PhotonNetwork.inRoom) {
-			GameObject.Find("ConnectionStatus").GetComponent<Text>().GetComponent<Text>().text = "Connected to room - " + PhotonNetwork.room.name;
+			GameObject.Find("ConnectionStatus").GetComponent<Text>().text = "Connected to room: " + PhotonNetwork.room.name + " Name: " + PhotonNetwork.player.name;
 		} else {
-			GameObject.Find("ConnectionStatus").GetComponent<Text>().GetComponent<Text>().text = PhotonNetwork.connectionState.ToString();
+			GameObject.Find("ConnectionStatus").GetComponent<Text>().text = PhotonNetwork.connectionStateDetailed.ToString();
 		}
 	}
 
@@ -30,6 +30,8 @@ public class NetworkManager : MonoBehaviour {
 	public void JoinRoom() {
 		Debug.Log("Attempting to join room...");
 		PhotonNetwork.JoinRoom(GameObject.Find("RoomName").GetComponentInChildren<Text>().text);
+
+		PhotonNetwork.player.name = GameObject.Find("PlayerName").GetComponentInChildren<Text>().text;
 	}
 
 	void OnJoinedRoom() {
@@ -44,20 +46,22 @@ public class NetworkManager : MonoBehaviour {
 	}
 
 	public void CreateRoom() {
-		Debug.Log("Creating new room for you...");
-		PhotonNetwork.CreateRoom(GameObject.Find("RoomName").GetComponentInChildren<Text>().text.ToLower());
+		if (GameObject.Find("RoomName").GetComponentInChildren<Text>().text == "") {
+			Debug.Log("Room must have a name!");
+		} else {
+			PhotonNetwork.CreateRoom(GameObject.Find("RoomName").GetComponentInChildren<Text>().text.ToLower());
+			Debug.Log("Creating new room for you...");
+		}
 	}
 
-	void OnPhotonPlayerDisconnected(PhotonPlayer other) {
-		Debug.Log(other.name + " disconnected."); // seen when other disconnects
-	}
-
-	void OnDisconnectedFromPhoton() {
-		Debug.Log("Disconnected from photon.");
-		GameObject.Find("ConnectionStatus").GetComponent<Text>().text = "Disconnected";
+	public void LeaveRoom() {
+		GameManager.isPaused = false;
+		PhotonNetwork.LeaveRoom();
+		Debug.Log("Leaving rooom.");
 	}
 
 	public void SpawnPlayer() {
-		PhotonNetwork.Instantiate("Moneky", GameObject.Find("Spawnpoint").transform.position, Quaternion.identity, 0);
+		PhotonNetwork.Instantiate("Player", GameObject.Find("Spawnpoint").transform.position, Quaternion.identity, 0);
+		GameManager.inGame = true;
 	}
 }
