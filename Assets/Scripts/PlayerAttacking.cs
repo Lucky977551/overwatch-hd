@@ -12,13 +12,14 @@ public class PlayerAttacking : MonoBehaviour {
 			cooldown -= Time.deltaTime;
 		}
 
-		if (Input.GetButton("Primary Fire")) {
-			Attack();
+		if (Input.GetButtonDown("Primary Fire")) {
+			Attack(20);
 		}
+
+		Debug.Log(cooldown.ToString());
 	}
 
-	void Attack() {
-		// Ignore attack if cooldown is active
+	void Attack(int amount) {
 		if (cooldown > 0) {
 			return;
 		}
@@ -29,7 +30,9 @@ public class PlayerAttacking : MonoBehaviour {
 		if (Physics.Raycast(attack, out hitInfo)) {
 			Debug.Log("Hit object: " + hitInfo.collider.name);
 
-			hitInfo.transform.gameObject.GetComponent<PhotonView>().RPC("ApplyDamage", PhotonTargets.All, 20);
+			if (hitInfo.transform.gameObject.GetComponent<PhotonView>() != null) {
+				hitInfo.transform.gameObject.GetComponent<PhotonView>().RPC("TakeDamage", PhotonTargets.AllBuffered, amount);
+			}
 		}
 
 		// Begin cooldown
