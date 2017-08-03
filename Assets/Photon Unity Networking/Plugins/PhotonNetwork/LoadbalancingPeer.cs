@@ -14,19 +14,18 @@ using System.Collections;
 using System.Collections.Generic;
 using ExitGames.Client.Photon;
 
-#if UNITY_4_0 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_4 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7 || UNITY_5 || UNITY_5_0 || UNITY_5_1 || UNITY_6
+#if UNITY_4_0 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_4 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7 || UNITY_5 || UNITY_5_0 || UNITY_5_1 || UNITY_2017
+    using UnityEngine;
     using Hashtable = ExitGames.Client.Photon.Hashtable;
     using SupportClassPun = ExitGames.Client.Photon.SupportClass;
 #endif
 
 
-
-
     /// <summary>
-    /// Internally used by PUN.
     /// A LoadbalancingPeer provides the operations and enum definitions needed to use the loadbalancing server application which is also used in Photon Cloud.
     /// </summary>
     /// <remarks>
+    /// Internally used by PUN.
     /// The LoadBalancingPeer does not keep a state, instead this is done by a LoadBalancingClient.
     /// </remarks>
     internal class LoadBalancingPeer : PhotonPeer
@@ -39,8 +38,9 @@ using ExitGames.Client.Photon;
 
         private readonly Dictionary<byte, object> opParameters = new Dictionary<byte, object>(); // used in OpRaiseEvent() (avoids lots of new Dictionary() calls)
 
+
         /// <summary>
-        /// Creates a Peer with selected connection protocol.
+        /// Creates a Peer with specified connection protocol. You need to set the Listener before using the peer.
         /// </summary>
         /// <remarks>Each connection protocol has it's own default networking ports for Photon.</remarks>
         /// <param name="protocolType">The preferred option is UDP.</param>
@@ -51,10 +51,11 @@ using ExitGames.Client.Photon;
         }
 
         /// <summary>
-        /// Creates a Peer with default connection protocol (UDP).
+        /// Creates a Peer with specified connection protocol and a Listener for callbacks.
         /// </summary>
-        public LoadBalancingPeer(IPhotonPeerListener listener, ConnectionProtocol protocolType) : base(listener, protocolType)
+        public LoadBalancingPeer(IPhotonPeerListener listener, ConnectionProtocol protocolType) : this(protocolType)
         {
+            this.Listener = listener;
         }
 
         public virtual bool OpGetRegions(string appId)
@@ -106,6 +107,17 @@ using ExitGames.Client.Photon;
         }
 
 
+        /// <summary>Used in the RoomOptionFlags parameter, this bitmask toggles options in the room.</summary>
+        enum RoomOptionBit : int
+        {
+            CheckUserOnJoin = 0x01,  // toggles a check of the UserId when joining (enabling returning to a game)
+            DeleteCacheOnLeave = 0x02,  // deletes cache on leave
+            SuppressRoomEvents = 0x04,  // suppresses all room events
+            PublishUserId = 0x08,  // signals that we should publish userId
+            DeleteNullProps = 0x10,  // signals that we should remove property if its value was set to null. see RoomOption to Delete Null Properties
+            BroadcastPropsChangeToAll = 0x20,  // signals that we should send PropertyChanged event to all room players including initiator
+        }
+
         private void RoomOptionsToOpParameters(Dictionary<byte, object> op, RoomOptions roomOptions)
         {
             if (roomOptions == null)
@@ -122,28 +134,32 @@ using ExitGames.Client.Photon;
             {
                 gameProperties[GamePropertyKey.MaxPlayers] = roomOptions.MaxPlayers;
             }
-
             op[ParameterCode.GameProperties] = gameProperties;
 
+
+            int flags = 0;  // a new way to send the room options as bitwise-flags
             op[ParameterCode.CleanupCacheOnLeave] = roomOptions.CleanupCacheOnLeave;	// this is actually setting the room's config
             if (roomOptions.CleanupCacheOnLeave)
             {
+                flags = flags | (int)RoomOptionBit.DeleteCacheOnLeave;
                 gameProperties[GamePropertyKey.CleanupCacheOnLeave] = true;  			// this is only informational for the clients which join
             }
 
             if (roomOptions.PlayerTtl > 0 || roomOptions.PlayerTtl == -1)
             {
+                flags = flags | (int)RoomOptionBit.CheckUserOnJoin;
                 op[ParameterCode.CheckUserOnJoin] = true;               // this affects rejoining a room. requires a userId to be used. added in v1.67
                 op[ParameterCode.PlayerTTL] = roomOptions.PlayerTtl;    // TURNBASED
-                op[ParameterCode.EmptyRoomTTL] = roomOptions.PlayerTtl;
             }
 
-            //if (roomOptions.EmptyRoomTtl > 0)
-            //{
-            //    op[ParameterCode.EmptyRoomTTL] = roomOptions.EmptyRoomTtl;   //TURNBASED
-            //}
+            if (roomOptions.EmptyRoomTtl > 0)
+            {
+                op[ParameterCode.EmptyRoomTTL] = roomOptions.EmptyRoomTtl;   //TURNBASED
+            }
+
             if (roomOptions.SuppressRoomEvents)
             {
+                flags = flags | (int)RoomOptionBit.SuppressRoomEvents;
                 op[ParameterCode.SuppressRoomEvents] = true;
             }
             if (roomOptions.Plugins != null)
@@ -152,9 +168,17 @@ using ExitGames.Client.Photon;
             }
             if (roomOptions.PublishUserId)
             {
+                flags = flags | (int)RoomOptionBit.PublishUserId;
                 op[ParameterCode.PublishUserId] = true;
             }
+            if (roomOptions.DeleteNullProperties)
+            {
+                flags = flags | (int)RoomOptionBit.DeleteNullProps; // this is only settable as flag
+            }
+
+            op[ParameterCode.RoomOptionFlags] = flags;
         }
+
 
         /// <summary>
         /// Creates a room (on either Master or Game Server).
@@ -336,6 +360,49 @@ using ExitGames.Client.Photon;
             return this.OpCustom(OperationCode.Leave, opParameters, true);
         }
 
+        /// <summary>Gets a list of games matching a SQL-like where clause.</summary>
+        /// <remarks>
+        /// Operation is only available in lobbies of type SqlLobby.
+        /// This is an async request which triggers a OnOperationResponse() call.
+        /// Returned game list is stored in RoomInfoList.
+        /// </remarks>
+        /// <see cref="http://doc.photonengine.com/en-us/pun/current/manuals-and-demos/matchmaking-and-lobby#sql_lobby_type"/>
+        /// <param name="lobby">The lobby to query. Has to be of type SqlLobby.</param>
+        /// <param name="queryData">The sql query statement.</param>
+        /// <returns>If the operation could be sent (has to be connected).</returns>
+        public virtual bool OpGetGameList(TypedLobby lobby, string queryData)
+        {
+            if (this.DebugOut >= DebugLevel.INFO)
+            {
+                this.Listener.DebugReturn(DebugLevel.INFO, "OpGetGameList()");
+            }
+
+            if (lobby == null)
+            {
+                if (this.DebugOut >= DebugLevel.INFO)
+                {
+                    this.Listener.DebugReturn(DebugLevel.INFO, "OpGetGameList not sent. Lobby cannot be null.");
+                }
+                return false;
+            }
+
+            if (lobby.Type != LobbyType.SqlLobby)
+            {
+                if (this.DebugOut >= DebugLevel.INFO)
+                {
+                    this.Listener.DebugReturn(DebugLevel.INFO, "OpGetGameList not sent. LobbyType must be SqlLobby.");
+                }
+                return false;
+            }
+
+            Dictionary<byte, object> opParameters = new Dictionary<byte, object>();
+            opParameters[(byte)ParameterCode.LobbyName] = lobby.Name;
+            opParameters[(byte)ParameterCode.LobbyType] = (byte)lobby.Type;
+            opParameters[(byte)ParameterCode.Data] = queryData;
+
+            return this.OpCustom(OperationCode.GetGameList, opParameters, true);
+        }
+
         /// <summary>
         /// Request the rooms and online status for a list of friends (each client must set a unique username via OpAuthenticate).
         /// </summary>
@@ -481,11 +548,15 @@ using ExitGames.Client.Photon;
                 opParameters[ParameterCode.LobbyStats] = true;
             }
 
+            // shortcut, if we have a Token
             if (authValues != null && authValues.Token != null)
             {
                 opParameters[ParameterCode.Secret] = authValues.Token;
-                return this.OpCustom(OperationCode.Authenticate, opParameters, true, (byte) 0, false);
+                return this.OpCustom(OperationCode.Authenticate, opParameters, true, (byte)0, false);   // we don't have to encrypt, when we have a token (which is encrypted)
             }
+
+
+            // without a token, we send a complete op auth
 
             opParameters[ParameterCode.AppVersion] = appVersion;
             opParameters[ParameterCode.ApplicationId] = appId;
@@ -540,6 +611,88 @@ using ExitGames.Client.Photon;
 
 
         /// <summary>
+        /// Sends this app's appId and appVersion to identify this application server side.
+        /// This is an async request which triggers a OnOperationResponse() call.
+        /// </summary>
+        /// <remarks>
+        /// This operation makes use of encryption, if that is established before.
+        /// See: EstablishEncryption(). Check encryption with IsEncryptionAvailable.
+        /// This operation is allowed only once per connection (multiple calls will have ErrorCode != Ok).
+        /// </remarks>
+        /// <param name="appId">Your application's name or ID to authenticate. This is assigned by Photon Cloud (webpage).</param>
+        /// <param name="appVersion">The client's version (clients with differing client appVersions are separated and players don't meet).</param>
+        /// <param name="authValues">Optional authentication values. The client can set no values or a UserId or some parameters for Custom Authentication by a server.</param>
+        /// <param name="regionCode">Optional region code, if the client should connect to a specific Photon Cloud Region.</param>
+        /// <param name="encryptionMode"></param>
+        /// <param name="expectedProtocol"></param>
+        /// <returns>If the operation could be sent (has to be connected).</returns>
+        public virtual bool OpAuthenticateOnce(string appId, string appVersion, AuthenticationValues authValues, string regionCode, EncryptionMode encryptionMode, ConnectionProtocol expectedProtocol)
+        {
+            if (this.DebugOut >= DebugLevel.INFO)
+            {
+                this.Listener.DebugReturn(DebugLevel.INFO, "OpAuthenticate()");
+            }
+
+
+            var opParameters = new Dictionary<byte, object>();
+
+            // shortcut, if we have a Token
+            if (authValues != null && authValues.Token != null)
+            {
+                opParameters[ParameterCode.Secret] = authValues.Token;
+                return this.OpCustom(OperationCode.AuthenticateOnce, opParameters, true, (byte)0, false);   // we don't have to encrypt, when we have a token (which is encrypted)
+            }
+
+            if (encryptionMode == EncryptionMode.DatagramEncryption && expectedProtocol != ConnectionProtocol.Udp)
+            {
+                Debug.LogWarning("Expected protocol set to UDP, due to encryption mode DatagramEncryption. Changing protocol in PhotonServerSettings from: " + PhotonNetwork.PhotonServerSettings.Protocol);
+                PhotonNetwork.PhotonServerSettings.Protocol = ConnectionProtocol.Udp;
+                expectedProtocol = ConnectionProtocol.Udp;
+            }
+
+            opParameters[ParameterCode.ExpectedProtocol] = (byte)expectedProtocol;
+            opParameters[ParameterCode.EncryptionMode] = (byte)encryptionMode;
+
+            opParameters[ParameterCode.AppVersion] = appVersion;
+            opParameters[ParameterCode.ApplicationId] = appId;
+
+            if (!string.IsNullOrEmpty(regionCode))
+            {
+                opParameters[ParameterCode.Region] = regionCode;
+            }
+
+            if (authValues != null)
+            {
+                if (!string.IsNullOrEmpty(authValues.UserId))
+                {
+                    opParameters[ParameterCode.UserId] = authValues.UserId;
+                }
+
+                if (authValues.AuthType != CustomAuthenticationType.None)
+                {
+                    opParameters[ParameterCode.ClientAuthenticationType] = (byte)authValues.AuthType;
+                    if (!string.IsNullOrEmpty(authValues.Token))
+                    {
+                        opParameters[ParameterCode.Secret] = authValues.Token;
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(authValues.AuthGetParameters))
+                        {
+                            opParameters[ParameterCode.ClientAuthenticationParams] = authValues.AuthGetParameters;
+                        }
+                        if (authValues.AuthPostData != null)
+                        {
+                            opParameters[ParameterCode.ClientAuthenticationData] = authValues.AuthPostData;
+                        }
+                    }
+                }
+            }
+
+            return this.OpCustom(OperationCode.AuthenticateOnce, opParameters, true, (byte)0, this.IsEncryptionAvailable);
+        }
+
+        /// <summary>
         /// Operation to handle this client's interest groups (for events in room).
         /// </summary>
         /// <remarks>
@@ -552,7 +705,7 @@ using ExitGames.Client.Photon;
         /// </remarks>
         /// <param name="groupsToRemove">Groups to remove from interest. Null will not remove any. A byte[0] will remove all.</param>
         /// <param name="groupsToAdd">Groups to add to interest. Null will not add any. A byte[0] will add all current.</param>
-        /// <returns></returns>
+        /// <returns>If operation could be enqueued for sending. Sent when calling: Service or SendOutgoingCommands.</returns>
         public virtual bool OpChangeGroups(byte[] groupsToRemove, byte[] groupsToAdd)
         {
             if (this.DebugOut >= DebugLevel.ALL)
@@ -585,11 +738,11 @@ using ExitGames.Client.Photon;
         /// <returns>If operation could be enqueued for sending. Sent when calling: Service or SendOutgoingCommands.</returns>
         public virtual bool OpRaiseEvent(byte eventCode, object customEventContent, bool sendReliable, RaiseEventOptions raiseEventOptions)
         {
-            opParameters.Clear(); // re-used private variable to avoid many new Dictionary() calls (garbage collection)
-            opParameters[(byte)ParameterCode.Code] = (byte)eventCode;
+            this.opParameters.Clear(); // re-used private variable to avoid many new Dictionary() calls (garbage collection)
+            this.opParameters[(byte)ParameterCode.Code] = (byte)eventCode;
             if (customEventContent != null)
             {
-                opParameters[(byte) ParameterCode.Data] = customEventContent;
+                this.opParameters[(byte) ParameterCode.Data] = customEventContent;
             }
 
             if (raiseEventOptions == null)
@@ -600,29 +753,61 @@ using ExitGames.Client.Photon;
             {
                 if (raiseEventOptions.CachingOption != EventCaching.DoNotCache)
                 {
-                    opParameters[(byte) ParameterCode.Cache] = (byte) raiseEventOptions.CachingOption;
+                    this.opParameters[(byte) ParameterCode.Cache] = (byte) raiseEventOptions.CachingOption;
                 }
                 if (raiseEventOptions.Receivers != ReceiverGroup.Others)
                 {
-                    opParameters[(byte) ParameterCode.ReceiverGroup] = (byte) raiseEventOptions.Receivers;
+                    this.opParameters[(byte) ParameterCode.ReceiverGroup] = (byte) raiseEventOptions.Receivers;
                 }
                 if (raiseEventOptions.InterestGroup != 0)
                 {
-                    opParameters[(byte) ParameterCode.Group] = (byte) raiseEventOptions.InterestGroup;
+                    this.opParameters[(byte) ParameterCode.Group] = (byte) raiseEventOptions.InterestGroup;
                 }
                 if (raiseEventOptions.TargetActors != null)
                 {
-                    opParameters[(byte) ParameterCode.ActorList] = raiseEventOptions.TargetActors;
+                    this.opParameters[(byte) ParameterCode.ActorList] = raiseEventOptions.TargetActors;
                 }
                 if (raiseEventOptions.ForwardToWebhook)
                 {
-                    opParameters[(byte) ParameterCode.EventForward] = true; //TURNBASED
+                    this.opParameters[(byte) ParameterCode.EventForward] = true; //TURNBASED
                 }
             }
 
-            return this.OpCustom((byte) OperationCode.RaiseEvent, opParameters, sendReliable, raiseEventOptions.SequenceChannel, raiseEventOptions.Encrypt);
+            return this.OpCustom((byte) OperationCode.RaiseEvent, this.opParameters, sendReliable, raiseEventOptions.SequenceChannel, raiseEventOptions.Encrypt);
+        }
+
+
+        /// <summary>
+        /// Internally used operation to set some "per server" settings. This is for the Master Server.
+        /// </summary>
+        /// <param name="receiveLobbyStats">Set to true, to get Lobby Statistics (lists of existing lobbies).</param>
+        /// <returns>False if the operation could not be sent.</returns>
+        public virtual bool OpSettings(bool receiveLobbyStats)
+        {
+            if (this.DebugOut >= DebugLevel.ALL)
+            {
+                this.Listener.DebugReturn(DebugLevel.ALL, "OpSettings()");
+            }
+
+            // re-used private variable to avoid many new Dictionary() calls (garbage collection)
+            this.opParameters.Clear();
+
+            // implementation for Master Server:
+            if (receiveLobbyStats)
+            {
+                this.opParameters[(byte)0] = receiveLobbyStats;
+            }
+
+            if (this.opParameters.Count == 0)
+            {
+                // no need to send op in case we set the default values
+                return true;
+            }
+            return this.OpCustom((byte)OperationCode.ServerSettings, this.opParameters, true);
         }
     }
+
+
 
     internal class OpJoinRandomRoomParams
     {
@@ -730,7 +915,7 @@ using ExitGames.Client.Photon;
         /// <remarks>
         /// Some subscription plans for the Photon Cloud are region-bound. Servers of other regions can't be used then.
         /// Check your master server address and compare it with your Photon Cloud Dashboard's info.
-        /// https://cloud.photonengine.com/dashboard
+        /// https://www.photonengine.com/dashboard
         ///
         /// OpAuthorize is part of connection workflow but only on the Photon Cloud, this error can happen.
         /// Self-hosted Photon servers with a CCU limited license won't let a client connect at all.
@@ -795,14 +980,19 @@ using ExitGames.Client.Photon;
         /// </summary>
         public const int SlotError = 32742; // 0x7FFF - 25,
 
-    }
+        /// <summary>
+        /// (32741) Server will react with this error if invalid encryption parameters provided by token
+        /// </summary>
+        public const int InvalidEncryptionParameters = 32741; // 0x7FFF - 24,
+
+}
 
 
     /// <summary>
     /// Class for constants. These (byte) values define "well known" properties for an Actor / Player.
-    /// Pun uses these constants internally.
     /// </summary>
     /// <remarks>
+    /// Pun uses these constants internally.
     /// "Custom properties" have to use a string-type as key. They can be assigned at will.
     /// </remarks>
     public class ActorProperties
@@ -821,9 +1011,9 @@ using ExitGames.Client.Photon;
 
     /// <summary>
     /// Class for constants. These (byte) values are for "well known" room/game properties used in Photon Loadbalancing.
-    /// Pun uses these constants internally.
     /// </summary>
     /// <remarks>
+    /// Pun uses these constants internally.
     /// "Custom properties" have to use a string-type as key. They can be assigned at will.
     /// </remarks>
     public class GamePropertyKey
@@ -860,9 +1050,8 @@ using ExitGames.Client.Photon;
 
     /// <summary>
     /// Class for constants. These values are for events defined by Photon Loadbalancing.
-    /// Pun uses these constants internally.
     /// </summary>
-    /// <remarks>They start at 255 and go DOWN. Your own in-game events can start at 0.</remarks>
+    /// <remarks>They start at 255 and go DOWN. Your own in-game events can start at 0. Pun uses these constants internally.</remarks>
     public class EventCode
     {
         /// <summary>(230) Initial list of RoomInfos (in lobby on Master)</summary>
@@ -909,13 +1098,14 @@ using ExitGames.Client.Photon;
 
         /// <summary>(250) Sent by Photon whent he event cache slice was changed. Done by OpRaiseEvent.</summary>
         public const byte CacheSliceChanged = 250;
+
+        /// <summary>(223) Sent by Photon to update a token before it times out.</summary>
+        public const byte AuthEvent = 223;
     }
 
 
-    /// <summary>
-    /// Class for constants. Codes for parameters of Operations and Events.
-    /// Pun uses these constants internally.
-    /// </summary>
+    /// <summary>Class for constants. Codes for parameters of Operations and Events.</summary>
+    /// <remarks>Pun uses these constants internally.</remarks>
     public class ParameterCode
     {
         /// <summary>(237) A bool parameter for creating games. If set to true, no room events are sent to the clients on join and leave. Default: false (and not sent).</summary>
@@ -1105,12 +1295,12 @@ using ExitGames.Client.Photon;
         /// <summary>(205) Used to define a "slice" for cached events. Slices can easily be removed from cache. Type: int.</summary>
         public const byte CacheSliceIndex = 205;
 
-        /// <summary>
-        /// Informs the server of the expected plugin setup.
+        /// <summary>(204) Informs the server of the expected plugin setup.</summary>
+        /// <remarks>
         /// The operation will fail in case of a plugin mismatch returning error code PluginMismatch 32751(0x7FFF - 16).
         /// Setting string[]{} means the client expects no plugin to be setup.
         /// Note: for backwards compatibility null omits any check.
-        /// </summary>
+        /// </remarks>
         public const byte Plugins = 204;
 
         /// <summary>(202) Used by the server in Operation Responses, when it sends the nickname of the client (the user's nickname).</summary>
@@ -1121,6 +1311,21 @@ using ExitGames.Client.Photon;
 
         /// <summary>(200) Informs user about version of plugin load to game</summary>
         public const byte PluginVersion = 200;
+
+        /// <summary>(195) Protocol which will be used by client to connect master/game servers. Used for nameserver.</summary>
+        public const byte ExpectedProtocol = 195;
+
+        /// <summary>(194) Set of custom parameters which are sent in auth request.</summary>
+        public const byte CustomInitData = 194;
+
+        /// <summary>(193) How are we going to encrypt data.</summary>
+        public const byte EncryptionMode = 193;
+
+        /// <summary>(192) Parameter of Authentication, which contains encryption keys (depends on AuthMode and EncryptionMode).</summary>
+        public const byte EncryptionData = 192;
+
+        /// <summary>(191) An int parameter summarizing several boolean room-options with bit-flags.</summary>
+        public const byte RoomOptionFlags = 191;
     }
 
 
@@ -1135,6 +1340,9 @@ using ExitGames.Client.Photon;
 
         /// <summary>(255) Code for OpJoin, to get into a room.</summary>
         public const byte Join = 255;
+
+        /// <summary>(231) Authenticates this peer and connects to a virtual application</summary>
+        public const byte AuthenticateOnce = 231;
 
         /// <summary>(230) Authenticates this peer and connects to a virtual application</summary>
         public const byte Authenticate = 230;
@@ -1182,6 +1390,12 @@ using ExitGames.Client.Photon;
 
         /// <summary>(219) WebRpc Operation.</summary>
         public const byte WebRpc = 219;
+
+        /// <summary>(218) Operation to set some server settings. Used with different parameters on various servers.</summary>
+        public const byte ServerSettings = 218;
+
+        /// <summary>(217) Get the game list matching a supplied sql filter (SqlListLobby only) </summary>
+        public const byte GetGameList = 217;
     }
 
     /// <summary>Defines possible values for OpJoinRoom and OpJoinOrCreate. It tells the server if the room can be only be joined normally, created implicitly or found on a web-service for Turnbased games.</summary>
@@ -1338,7 +1552,7 @@ using ExitGames.Client.Photon;
 
 
         /// <summary>Time To Live (TTL) for a room when the last player leaves. Keeps room in memory for case a player re-joins soon. In milliseconds.</summary>
-        //public int EmptyRoomTtl;
+        public int EmptyRoomTtl;
 
         ///// <summary>Activates UserId checks on joining - allowing a users to be only once in the room.</summary>
         ///// <remarks>
@@ -1401,12 +1615,22 @@ using ExitGames.Client.Photon;
         /// </summary>
         /// <remarks>
         /// When you set this to true, Photon will publish the UserIds of the players in that room.
-        /// In that case, you can use PhotonPlayer.userId, to access any player's userID.
+        /// In that case, you can use PhotonPlayer.UserId, to access any player's userID.
         /// This is useful for FindFriends and to set "expected users" to reserve slots in a room (see PhotonNetwork.JoinRoom e.g.).
         /// </remarks>
         public bool PublishUserId { get { return this.publishUserIdField; } set { this.publishUserIdField = value; } }
         private bool publishUserIdField = false;
 
+        /// <summary>Optionally, properties get deleted, when null gets assigned as value. Defaults to off / false.</summary>
+        /// <remarks>
+        /// When Op SetProperties is setting a key's value to null, the server and clients should remove the key/value from the Custom Properties.
+        /// By default, the server keeps the keys (and null values) and sends them to joining players.
+        ///
+        /// Important: Only when SetProperties does a "broadcast", the change (key, value = null) is sent to clients to update accordingly.
+        /// This applies to Custom Properties for rooms and actors/players.
+        /// </remarks>
+        public bool DeleteNullProperties { get { return this.deleteNullPropertiesField; } set { this.deleteNullPropertiesField = value; } }
+        private bool deleteNullPropertiesField = false;
 
     #region Obsoleted Naming
 
@@ -1433,8 +1657,8 @@ using ExitGames.Client.Photon;
 }
 
 
-/// <summary>Aggregates several less-often used options for operation RaiseEvent. See field descriptions for usage details.</summary>
-public class RaiseEventOptions
+    /// <summary>Aggregates several less-often used options for operation RaiseEvent. See field descriptions for usage details.</summary>
+    public class RaiseEventOptions
     {
         /// <summary>Default options: CachingOption: DoNotCache, InterestGroup: 0, targetActors: null, receivers: Others, sequenceChannel: 0.</summary>
         public readonly static RaiseEventOptions Default = new RaiseEventOptions();
@@ -1524,6 +1748,13 @@ public class RaiseEventOptions
         }
     }
 
+
+    /// <summary>
+    /// Options for authentication modes. From "classic" auth on each server to AuthOnce (on NameServer).
+    /// </summary>
+    public enum AuthModeOption { Auth, AuthOnce, AuthOnceWss }
+
+
     /// <summary>
     /// Options for optional "Custom Authentication" services used with Photon. Used by OpAuthenticate after connecting to Photon.
     /// </summary>
@@ -1537,6 +1768,15 @@ public class RaiseEventOptions
 
         /// <summary>Authenticates users by their Facebook Account. Set auth values accordingly!</summary>
         Facebook = 2,
+
+        /// <summary>Authenticates users by their Oculus Account and token.</summary>
+        Oculus = 3,
+
+        /// <summary>Authenticates users by their PSN Account and token.</summary>
+        PlayStation = 4,
+
+        /// <summary>Authenticates users by their Xbox Account and XSTS token.</summary>
+        Xbox = 5,
 
         /// <summary>Disables custom authentification. Same as not providing any AuthenticationValues for connect (more precisely for: OpAuthenticate).</summary>
         None = byte.MaxValue
@@ -1555,6 +1795,10 @@ public class RaiseEventOptions
     ///
     /// Custom Authentication lets you verify end-users by some kind of login or token. It sends those
     /// values to Photon which will verify them before granting access or disconnecting the client.
+    ///
+    /// The AuthValues are sent in OpAuthenticate when you connect, so they must be set before you connect.
+    /// Should you not set any AuthValues, PUN will create them and set the playerName as userId in them.
+    /// If the AuthValues.userId is null or empty when it's sent to the server, then the Photon Server assigns a userId!
     ///
     /// The Photon Cloud Dashboard will let you enable this feature and set important server values for it.
     /// https://www.photonengine.com/dashboard
@@ -1582,6 +1826,7 @@ public class RaiseEventOptions
         public string Token { get; set; }
 
         /// <summary>The UserId should be a unique identifier per user. This is for finding friends, etc..</summary>
+        /// <remarks>See remarks of AuthValues for info about how this is set and used.</remarks>
         public string UserId { get; set; }
 
 
