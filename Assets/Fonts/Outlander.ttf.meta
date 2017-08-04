@@ -1,15 +1,17 @@
 fileFormatVersion: 2
-guid: af0c02e2df4c504439af70766b7d99e6
-timeCreated: 1468726272
+guid: 1c8f023b0ca7f084187a4df70b98a4a4
+timeCreated: 1501786592
 licenseType: Free
 TrueTypeFontImporter:
-  serializedVersion: 3
+  serializedVersion: 4
   fontSize: 16
   forceTextureCase: -2
-  characterSpacing: 1
-  characterPadding: 0
+  characterSpacing: 0
+  characterPadding: 1
   includeFontData: 1
-  fontNames: []
+  fontName: outlander
+  fontNames:
+  - outlander
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0

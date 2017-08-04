@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: 2bf8b514c9a6e8f4183ba9b517f58bc8
+timeCreated: 1501786641
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Prodotto In Cina
+  fontNames:
+  - Prodotto In Cina
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
