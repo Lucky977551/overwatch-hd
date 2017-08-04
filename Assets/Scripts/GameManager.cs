@@ -5,10 +5,12 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     public const string VERSION = "0.2.3";
-    public GameObject pauseMenu;
 
     public static bool isPaused = false;
     public static bool inGame = false;
+
+    public GameObject pauseMenu;
+    public GameObject cameraControl;
 
     void Update()
     {
@@ -35,6 +37,7 @@ public class GameManager : MonoBehaviour
         if (isPaused)
         {
             pauseMenu.SetActive(true);
+
         }
         else
         {
@@ -44,8 +47,6 @@ public class GameManager : MonoBehaviour
 
     public void MainMenu()
     {
-        isPaused = false;
-        inGame = false;
         gameObject.GetComponent<NetworkManager>().LeaveRoom();
         SceneManager.LoadScene("MainMenu");
     }

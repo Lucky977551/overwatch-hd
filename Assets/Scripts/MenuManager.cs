@@ -42,7 +42,7 @@ public class MenuManager : MonoBehaviour
     public void StartGame()
     {
         // Load a level (just test for now)
-        SceneManager.LoadScene("Level");
+        SceneManager.LoadScene("TestLevel");
     }
 
 	public void QuitGame()
